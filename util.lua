@@ -3,6 +3,16 @@ local sort, pairs, select, unpack, error =
 local type, setmetatable, getmetatable =
       type, setmetatable, getmetatable
 local random = math.random
+local max = math.max
+
+function any(fun, tab)
+  for _, v in ipairs(tab) do
+    if fun(v) then
+      return true
+    end
+  end
+  return false
+end
 
 -- bounds b so a<=b<=c
 function bound(a, b, c)
@@ -20,6 +30,14 @@ function arr_to_set(tab)
   local ret = {}
   for i=1,#tab do
     ret[tab[i]] = true
+  end
+  return ret
+end
+
+function set_to_arr(tab)
+  local ret = {}
+  for v,_ in pairs(tab) do
+    table.insert(ret, v)
   end
   return ret
 end
@@ -102,12 +120,12 @@ function procat(str)
 end
 
 -- iterate over frozen pairs in sorted order
-function spairs(tab)
+function spairs(tab, ...)
   local keys,vals,idx = {},{},0
   for k in pairs(tab) do
     keys[#keys+1] = k
   end
-  sort(keys)
+  sort(keys, ...)
   for i=1,#keys do
     vals[i]=tab[keys[i]]
   end
@@ -115,6 +133,16 @@ function spairs(tab)
     idx = idx + 1
     return keys[idx], vals[idx]
   end
+end
+
+-- like spairs, but returns an array of tuples instead of an iterator
+function tspairs(tab, ...)
+  local ret, idx = {}, 1
+  for k,v in spairs(tab, ...) do
+    ret[idx] = {k,v}
+    idx = idx + 1
+  end
+  return ret
 end
 
 function uniformly(t)
@@ -207,6 +235,90 @@ function shallowcpy(tab)
   local ret = {}
   for k,v in pairs(tab) do
     ret[k]=v
+  end
+  return ret
+end
+
+-- pls no table keys
+function deepeq(a,b)
+  if type(a) ~= "table" or type(b) ~= "table" then
+    --print("comparing non-tables "..tostring(a) .." and "..tostring(b))
+    return a==b
+  end
+  local done_k = {}
+  for k,v in pairs(a) do
+    done_k[k] = true
+    if not deepeq(a[k],b[k]) then
+      --print("false because key "..k.." has different values "..tostring(a[k]).." and "..tostring(b[k]))
+      return false
+    end
+  end
+  for k,_ in pairs(b) do
+    if not done_k[k] then
+      --print("false because key "..k.." is missing from a")
+      return false
+    end
+  end
+  --print("true!")
+  return true
+end
+
+function file_contents(filename)
+  if love then
+    local file = love.filesystem.newFile(filename)
+    file:open("r")
+    local ret = file:read(file:getSize())
+    return ret
+  else
+    local ret = io.open(filename):read("*a")
+    return ret
+  end
+end
+
+function set_file(filename, contents)
+  if love then
+    local success = love.filesystem.write(filename, contents)
+    if not success then
+      print("error writing to "..filename)
+    end
+  else
+    local file = io.open(filename, "w")
+    file:write(contents)
+    file:close()
+  end
+end
+
+function arr_to_counter(t)
+  local ret = {}
+  for i=1,#t do
+    local elem = t[i]
+    ret[elem] = (ret[elem] or 0) + 1
+  end
+  return ret
+end
+
+-- for fixing json encoded numeric dicts
+-- TODO: this may become a performance bottleneck for the server later
+function fix_num_keys(t)
+  local ret = {}
+  for k,v in pairs(t) do
+    if type(v) == "table" then
+      v = fix_num_keys(v)
+    end
+    local new_k = tonumber(k) or k
+    if (type(ret[new_k]) ~= "number") or (type(v) ~= "number") or (ret[new_k] < v) then
+      ret[new_k] = v
+    end
+  end
+  return ret
+end
+
+function union_counters(list_of_counters)
+  local ret = {}
+  for _,counter in pairs(list_of_counters) do
+    for key,count in pairs(counter) do
+      ret[key] = max(count, ret[key] or 0)
+    end
   end
   return ret
 end

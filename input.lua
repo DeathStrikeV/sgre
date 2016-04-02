@@ -1,44 +1,31 @@
 function love.mousepressed(x,y,which)
-  print("mouse pressed!")
-  if which=="l" then
-    mouse_down = true
-    mouse_x = x
-    mouse_y = y
+  loveframes.mousepressed(x, y, which)
+end
+
+function love.mousereleased(x, y, which)
+  loveframes.mousereleased(x, y, which)
+end
+
+function love.keypressed(key, unicode)
+  if key == "f12" then
+    DISPLAY_FRAMERATE = not DISPLAY_FRAMERATE
   end
-end
-
-Button = class(function(self,cb,x,y,w,h)
-    self.cb = cb
-    self.x1 = x
-    self.x2 = x + w
-    self.y1 = y
-    self.y2 = y + h
-    self.w = w
-    self.h = h
-  end)
-
-function Button:contains(x,y)
-  return self.x1 <= x and x < self.x2 and self.y1 <= y and y < self.y2
-end
-
-function do_input()
-  mouse_x = mouse_x or love.mouse.getX()
-  mouse_y = mouse_y or love.mouse.getY()
-  for _,button in ipairs(buttons) do
-    if button:contains(mouse_x, mouse_y) then
-      if mouse_down then
-        button.cb()
-      else
-        button:draw_outline()
-      end
-    end
+  if key == "f6" then
+    RIP_IMAGEFONTS = not RIP_IMAGEFONTS
   end
-  mouse_down = false
-  mouse_x = nil
-  mouse_y = nil
-  buttons = {}
+  if key == "f7" then
+    load_img = load_image_on_main_thread
+  end
+  if key == "f8" then
+    SUPPORTS_MIPMAPS = false
+  end
+  loveframes.keypressed(key, unicode)
 end
 
-function make_button(cb, x,y,w,h)
-  buttons[#buttons+1] = Button(cb,x,y,w,h)
+function love.keyreleased(key)
+  loveframes.keyreleased(key)
+end
+
+function love.textinput(text)
+  loveframes.textinput(text)
 end
